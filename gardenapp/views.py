@@ -129,7 +129,31 @@ def checkUserStatus(request):
     else:
         return(JsonResponse({'Auth' : False},status = 401))
     
+@api_view(['POST'])
+def getUserInfo(request):
+    print("in")
+    ID_in = request.data.get("ID")
+    try:
+        user_ = User.objects.get(id = ID_in)
+    except Exception as e:
+        print(e)
+    print("yep")
+    try:
+        serializer = UserSerializer(user_, many=False)
+    except Exception as e:
+        print(e)
+    try:
+        print(serializer)#.data)
+    except Exception as e:
+        print(e)
+    return(Response(serializer.data))
 
+
+@api_view(['get'])
+def user_list(request):
+    users_ = User.objects.all()
+    serializer = UserSerializer(users_, many=True)
+    return Response(serializer.data)
 
 @api_view(['get'])
 def user_list(request):

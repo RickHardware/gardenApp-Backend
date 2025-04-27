@@ -20,6 +20,7 @@ urlpatterns = [
     ##User specific URLs
     path('user/<str:id>/', views.user_get, name='user-specific'),
     path('post/', views.create_user, name='user-post'),
+    path('userprofile/',views.getUserInfo, name = 'profile-get'),
 
 
     #Follower specific URLS:

@@ -4,7 +4,7 @@ from .models import garden,User,message
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username','email','password']
+        fields = ['username','email','password','date_joined']
     def create(self, validated_data):
         user = User(email = validated_data['email'],
                     username = validated_data['username'])
