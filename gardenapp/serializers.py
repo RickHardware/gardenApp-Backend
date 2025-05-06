@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import garden,User,message
-
+#Serializers effectively constructs a their object based on their model
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -17,7 +17,6 @@ class GardenSerializer(serializers.ModelSerializer):
     class Meta:
         model = garden
         fields = ['ownerID', 'date_created', 'longitude','latitude','bio', 'name']
-
 
 class messageSerializer(serializers.ModelSerializer):
     class Meta:

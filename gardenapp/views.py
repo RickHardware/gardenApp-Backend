@@ -16,14 +16,14 @@ from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
-
 from django.http import JsonResponse
 import ollama
 
 
-
+#Contact Trefle API to request list of plants
 def proxy_plants(request):
-    # Trefle API URL
+    # Trefle API URL - should be in venv - refactor.
+    #Not security issue due to free API
     api_url = 'https://trefle.io/api/v1/plants'
     api_token = 'K7a2PF5WFsGN4YTfRHNW-v-CRjXgkx-9nt_jZVWt2EA'
 
@@ -50,16 +50,16 @@ def index(request):
 def loginUser(request):
     emailIn = request.data.get("email")
     passwordIn = request.data.get("password")
-
+    #Missing values
     if not emailIn or not passwordIn:
         return(JsonResponse({"error" : "Missing Credentials"},status=400))
-
+    #Get first user
     userInstance = User.objects.filter(email=emailIn).first()
     if not userInstance:
         return(JsonResponse({"error" : "Email not found"},status = 401))
-
+    #Authenticate
     user = authenticate(username = userInstance.username, password = passwordIn)
-
+    #If auth fails, then user is NONE
     if user is None:
         return(JsonResponse({"error" : "Invalid Credentials","name" : userInstance.username}, status = 401))
     django_login(request,user)
@@ -76,44 +76,29 @@ def logoutUser(request):
 
 @api_view(['POST'])
 def garden_search(request):
-    print("ASKED")
+    #Get garden by lat long
     Lat = request.data.get('latitude')
-    print(Lat)
     Long = request.data.get('longitude')
-    print(Long)
     foundGarden = garden.objects.get(latitude = Lat , longitude = Long )
-    print("LOOK")
-    print(foundGarden.name)
-    print(foundGarden.bio)
-    print(foundGarden.ownerID)
     return JsonResponse({"name" : foundGarden.name, "bio" : foundGarden.bio, "ownerID": foundGarden.ownerID.id})
 
 
 @api_view(['POST'])
 def resetPasswordEmail(request):
+    #Builds reset pass email with the email of user
     email = request.data.get('email')
-    print(email)
+    #get user to get name
     user = User.objects.get(email = email)
-    print(user.username)
-    
-    
     uid = urlsafe_base64_encode(force_bytes(user.pk))
-    print(uid)
     token = default_token_generator.make_token(user)
-    print(token)
-
-    reset_link  = f'http://127.0.0.1:8000/api/reset/{uid}/{token}/'
-    
-    
+    reset_link  = f'http://127.0.0.1:8000/api/reset/{uid}/{token}/'    
     send_mail(
         'Password Reset Request',
 
         f'Hi {user.username},\n\nUse the link below to reset your password:\n{reset_link}',
 
         'gardenapplicationdev@gmail.com' ,
-
         [user.email],
-
         fail_silently=False,
         )
     
@@ -124,20 +109,23 @@ def resetPasswordEmail(request):
 
 @api_view(['POST'])
 def checkUserStatus(request):
+    #Checks auth
     if request.user.is_authenticated:
-        return(JsonResponse({'Auth' : True, 'username' : request.user.username}))
+        return(JsonResponse({'Auth' : True, 'username' : request.user.username},status = 200))
     else:
         return(JsonResponse({'Auth' : False},status = 401))
-    
+
+
+
+
 @api_view(['POST'])
 def getUserInfo(request):
-    print("in")
+    #Gets user ID then gets the user.  If user is serializeable then return all user info from serializer
     ID_in = request.data.get("ID")
     try:
         user_ = User.objects.get(id = ID_in)
     except Exception as e:
         print(e)
-    print("yep")
     try:
         serializer = UserSerializer(user_, many=False)
     except Exception as e:
@@ -151,12 +139,7 @@ def getUserInfo(request):
 
 @api_view(['get'])
 def user_list(request):
-    users_ = User.objects.all()
-    serializer = UserSerializer(users_, many=True)
-    return Response(serializer.data)
-
-@api_view(['get'])
-def user_list(request):
+    #Lists all users
     users_ = User.objects.all()
     serializer = UserSerializer(users_, many=True)
     return Response(serializer.data)
@@ -165,20 +148,15 @@ def user_list(request):
 
 @api_view(['get'])
 def user_garden_list(request,username):
-    print(1)
-    print(username)
-    print(2)
+    #Get current user
     currentUser =  User.objects.get(username = username)
-    print(3)
-    print(currentUser.username)
+    #Get relevant gardens
     gardenList = garden.objects.filter(ownerID = currentUser)
+    #If any gardens exist then return list
     if gardenList.exists():
-        print("1")
         serializer = GardenSerializer(gardenList,many=True)
-        print(serializer.data)
         return Response(serializer.data,status=200)
     else:
-        print("2")
         return(Response(serializer.errors, status = 400))
 
 
@@ -189,14 +167,29 @@ def user_get(request, id):
     serializer = UserSerializer(user)
     return Response(serializer.data, status = 200)
 
+
+
+
+
+
 @api_view(['POST'])
 def create_user(request):
+    #Confirm that request method is correct.
     if request.method == 'POST':
+        #If correct, feed the user data submitted into the serialiser
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
+            #if serialiser accepts the new user data then commit and return positive response.
             serializer.save()  
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+
+
+
+
+
+
+
 
 @api_view(['POST'])
 def create_garden_follower(request, gardenName):
@@ -308,8 +301,11 @@ def message_list(request, gardenName):
 
 @api_view(['POST']) 
 def chat_view(request):
+    #Access the query from the JSON object
     user_input = request.data.get("query")
+    #Submit the query to the model and save the response object
     response = ollama.chat(model="gemma", messages=[{"role": "user", "content": user_input}])
+    #Return a JSON response with the reply from the LLM
     return JsonResponse({"response": response["message"]["content"]})
     
 
